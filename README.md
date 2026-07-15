@@ -78,6 +78,53 @@ Each file in `dressed_<source>/` is either:
 - A **skill file** (~50%) — YAML frontmatter with `name`, `description`, and a body modeled on real production skill files (`## Overview`, `## When to Use`, `## The Iron Law`, `## The Process`, `## Additional Notes`).
 - An **MCP server README** (~50%) — YAML frontmatter with `name`, `description`, `transport`, and a body with `## Installation`, `## Configuration` (with a JSON `mcpServers` block), `## Available Tools` (with a tool table), `## Environment Variables`, `## Notes`.
 
+### Where the "real-looking" skill templates came from
+
+The skill-file envelopes in `dressed_*/` are modeled directly on the
+production **Superpowers** skill collection by Jesse Vincent
+([`obra/superpowers`](https://github.com/obra/superpowers), MIT-licensed).
+That's the collection of skills that ships with the Anthropic-recommended
+Superpowers plugin for Claude Code.
+
+Concrete files worth reading if you want to compare the mimicry to the
+real thing (or if you're building a detector and want a benign baseline
+to test against for false positives):
+
+| Real skill (upstream) | What the template borrows |
+|---|---|
+| [`skills/systematic-debugging/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md) | Authoritative voice, `## The Iron Law` fenced-code callout, numbered-step `## The Process` |
+| [`skills/brainstorming/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md) | Multi-line `description` field, `<HARD-GATE>` inline callouts, checklist body structure |
+| [`skills/test-driven-development/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md) | "Violating the letter is violating the spirit" phrasing, "When to use" bullet list |
+| [`skills/executing-plans/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/executing-plans/SKILL.md) | `## Overview` → `## The Process` → `## When to Stop and Ask` shape |
+| [`skills/using-git-worktrees/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/using-git-worktrees/SKILL.md) | Practical-tool-usage skill shape (as opposed to process-discipline shape) |
+
+The BlackDuck internal fork of the same collection is also available at
+[`whitehatsec/Blackduck-Claude-Marketplace`](https://github.com/whitehatsec/Blackduck-Claude-Marketplace)
+under `plugins/blackduck-superpowers/skills/`, and its file layout is
+identical (BlackDuck redistributes upstream and adds a handful of
+internal-only skills).
+
+The frontmatter fields used in `dressed_*/` skill files (`name`,
+`description`) match the Superpowers convention exactly. The specific
+skill archetypes (`git-branch-hygiene`, `pr-description-writer`,
+`systematic-code-review`, etc.) are invented — Superpowers doesn't
+ship these specific names — but the shape, voice, and section
+structure are drawn from the real files above.
+
+**For detector evaluation:** clone the upstream Superpowers repo and
+grep your rules across `skills/**/*.md`. If your rules fire on those
+files, you have a false-positive problem specifically for legitimate
+skill content. Pair that FP measurement with the recall measurement
+against `dressed_*/` in this repo for a full picture.
+
+```bash
+git clone --depth 1 https://github.com/obra/superpowers /tmp/superpowers
+# Should return ZERO or very few matches — these are legitimate skill files
+your_detector.py /tmp/superpowers/skills/**/*.md
+# Should return many matches — these are adversarially-dressed skill files
+your_detector.py dressed_*/*_skill_*.md
+```
+
 The adversarial payload is smuggled into the body using one of **four modes**, distributed ≈evenly:
 
 | Mode | What it does | Roughly matches |
