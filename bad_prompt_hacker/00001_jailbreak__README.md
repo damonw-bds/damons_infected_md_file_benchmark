@@ -1,0 +1,15 @@
+---
+source: "prompt-hacker-collections"
+source_url: "https://github.com/yunwei37/prompt-hacker-collections"
+source_file: "jailbreak/README.md"
+license: "MIT (see upstream)"
+category: "curated_jailbreak_notes"
+---
+# Jailbreak prompts
+
+
+
+## reference
+
+- https://www.jailbreakchat.com/
+- https://gist.github.com/coolaj86/6f4f7b30129b0251f61fa7baaa881516

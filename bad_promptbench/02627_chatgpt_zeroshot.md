@@ -1,0 +1,9 @@
+---
+source: "promptbench"
+source_url: "https://github.com/microsoft/promptbench"
+source_file: "adv_prompts/chatgpt_zeroshot.md"
+source_line: "234"
+license: "MIT (see upstream)"
+category: "adversarial_prompt"
+---
+Language: japanese, acc: 77.50%, prompt: To determine whether it is grammatically correct, divide a given sentence into two categories: 'acceptable' or 'unacceptable'.

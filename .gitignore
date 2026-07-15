@@ -1,0 +1,14 @@
+# Regeneration scratch space (upstream clones)
+_tmp/
+tmp/
+*.pyc
+__pycache__/
+
+# Editor scratch
+*~
+*.swp
+.DS_Store
+
+# Local test outputs
+detector_results/
+false_positive_report.*
