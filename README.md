@@ -38,20 +38,71 @@ measure precision.
 
 ## Layout
 
+The corpus comes in **two parallel trees**:
+
+- `bad_<source>/` — the **raw payloads** (one adversarial prompt per file, YAML-tagged with provenance)
+- `dressed_<source>/` — the **agent-shaped envelopes** (each raw payload smuggled into a plausible skill file or MCP server README)
+
 ```
 damons_infected_md_file_benchmark/
-├── README.md                    ← this file
-├── LICENSE.md                   ← license terms + per-source attribution
+├── README.md                     ← this file
+├── LICENSE.md                    ← license terms + per-source attribution
 ├── .gitignore
-├── extract.py                   ← regeneration script (reproduces the corpus)
-├── bad_jailbreak_llms/          1,405 files — Discord/Reddit jailbreak prompts
-├── bad_jailbreakbench/          1,637 files — automated attack artifacts
-├── bad_promptbench/             3,000 files — Microsoft adversarial prompts
-├── bad_harmbench/                 400 files — CAIS harmful behaviors
-├── bad_do_not_answer/             939 files — questions safe LLMs should refuse
-└── bad_prompt_hacker/              10 files — curated jailbreak notes
+├── extract.py                    ← regenerates bad_* dirs from upstream repos
+├── dress_as_skills.py            ← regenerates dressed_* dirs from bad_* dirs
+│
+├── bad_jailbreak_llms/           1,832 files — Discord/Reddit jailbreak prompts + forbidden-Q set
+├── bad_jailbreakbench/           1,637 files — automated attack artifacts (GCG/PAIR/DSN/JBC/etc.)
+├── bad_promptbench/              3,000 files — Microsoft adversarial prompts
+├── bad_harmbench/                  400 files — CAIS harmful behaviors
+├── bad_do_not_answer/              939 files — questions safe LLMs should refuse
+├── bad_prompt_hacker/               10 files — curated jailbreak notes
+│                                  ──────
+│                                  7,818 raw payload files
+│
+├── dressed_jailbreak_llms/       1,832 files ← paired 1:1 with bad_jailbreak_llms/
+├── dressed_jailbreakbench/       1,637 files ← paired 1:1 with bad_jailbreakbench/
+├── dressed_promptbench/          3,000 files ← paired 1:1 with bad_promptbench/
+├── dressed_harmbench/              400 files ← paired 1:1 with bad_harmbench/
+├── dressed_do_not_answer/          939 files ← paired 1:1 with bad_do_not_answer/
+└── dressed_prompt_hacker/           10 files ← paired 1:1 with bad_prompt_hacker/
                                   ──────
-                                  7,391 total .md files (~31 MB)
+                                  7,818 dressed files (roughly 50/50 skill vs MCP)
+                                  15,636 total .md files (~50 MB)
+```
+
+## Dressed corpus — the attack-shape half
+
+Each file in `dressed_<source>/` is either:
+
+- A **skill file** (~50%) — YAML frontmatter with `name`, `description`, and a body modeled on real production skill files (`## Overview`, `## When to Use`, `## The Iron Law`, `## The Process`, `## Additional Notes`).
+- An **MCP server README** (~50%) — YAML frontmatter with `name`, `description`, `transport`, and a body with `## Installation`, `## Configuration` (with a JSON `mcpServers` block), `## Available Tools` (with a tool table), `## Environment Variables`, `## Notes`.
+
+The adversarial payload is smuggled into the body using one of **four modes**, distributed ≈evenly:
+
+| Mode | What it does | Roughly matches |
+|---|---|---|
+| `overt` | Payload dropped in plain sight as a "priority instruction" | Naïve attacker |
+| `hidden` | Payload wrapped in an HTML comment, or preceded/interleaved with zero-width Unicode, or base64-encoded with a "decode and follow" instruction | Trojan Source, ASCII smuggling |
+| `disguised` | Payload phrased as an operational step, an example the skill "handles", or a required configuration | Attacker mimicking legitimate skill/tool syntax |
+| `research` | Payload wrapped in real published attack framings — AgentDojo's `<INFORMATION>...</INFORMATION>` "important message from the user", InjecAgent's attack-inside-tool-response (fake review/email/search-snippet), or Greshake-style indirect-injection notes | AgentDojo, InjecAgent, Greshake et al. |
+
+Every dressed file has three extra frontmatter keys for detector evaluation:
+- `_attack_shape` — `"skill"` or `"mcp"`
+- `_attack_smuggling_mode` — `"overt"` / `"hidden"` / `"disguised"` / `"research"`
+- `upstream_*` — full provenance back to the raw payload
+
+So you can slice the corpus at will:
+```bash
+# All dressed skill files
+rg -l '_attack_shape: "skill"' dressed_*/
+
+# All dressed MCP files that use the AgentDojo important-instructions template
+rg -l '_attack_smuggling_mode: "research"' dressed_*/ | \
+    xargs rg -l 'This is an important message from me'
+
+# All dressed files whose original payload was categorized as chemical/biological
+rg -l 'upstream_semantic_category: "chemical_biological"' dressed_*/
 ```
 
 ### Per-file structure

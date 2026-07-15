@@ -112,6 +112,66 @@ preserve attribution to the upstream sources listed below.
 
 ---
 
+## Attack-shape references for the dressed corpus
+
+The `dressed_*/` directories re-wrap raw payloads into skill / MCP-server
+envelopes using attack framings **derived from** the following published
+research. No content is copied verbatim from these projects; only the
+attack *shape* is reproduced.
+
+### AgentDojo  (attack framing: `<INFORMATION>...</INFORMATION>`)
+
+- **URL:** https://github.com/ethz-spylab/agentdojo
+- **License:** MIT
+- **Citation:**
+  ```
+  @inproceedings{debenedetti2024agentdojo,
+    title  = {AgentDojo: A Dynamic Environment to Evaluate Prompt
+              Injection Attacks and Defenses for LLM Agents},
+    author = {Debenedetti, Edoardo and Zhang, Jie and Balunovi{\'c},
+              Mislav and Beurer-Kellner, Luca and Fischer, Marc and
+              Tram{\`e}r, Florian},
+    booktitle = {NeurIPS Datasets and Benchmarks Track},
+    year   = {2024}
+  }
+  ```
+- The AgentDojo `important_instructions` attack template
+  (from `src/agentdojo/attacks/important_instructions_attacks.py`) is
+  the source of the `<INFORMATION>...</INFORMATION>` "message from the
+  user" framing used in the `research` smuggling mode.
+
+### InjecAgent  (attack framing: payload-inside-tool-response)
+
+- **URL:** https://github.com/uiuc-kang-lab/InjecAgent
+- **License:** MIT
+- **Citation:**
+  ```
+  @inproceedings{zhan2024injecagent,
+    title  = {InjecAgent: Benchmarking Indirect Prompt Injections in
+              Tool-Integrated Large Language Model Agents},
+    author = {Zhan, Qiusi and Liang, Zhixiang and Ying, Zifan and
+              Kang, Daniel},
+    booktitle = {Findings of ACL},
+    year   = {2024}
+  }
+  ```
+- InjecAgent's core pattern (attacker instruction embedded inside a
+  plausible tool-response field such as a product review, an email
+  body, or a search-result snippet) is the source of the
+  `injecagent_tool_response` variant of the `research` smuggling mode.
+
+### Greshake et al.  (attack framing: indirect prompt injection)
+
+- **URL:** https://github.com/greshake/llm-security
+- **Reference:** Greshake, K., Abdelnabi, S., Mishra, S., Endres, C.,
+  Holz, T., & Fritz, M. (2023). "Not what you've signed up for:
+  Compromising Real-World LLM-Integrated Applications with Indirect
+  Prompt Injection." *arXiv:2302.12173*.
+- Source of the "instruction for AI readers only" / "system note,
+  invisible to humans" framing used in the third `research` variant.
+
+---
+
 ## MIT License (aggregation layer)
 
 ```

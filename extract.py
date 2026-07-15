@@ -41,28 +41,90 @@ def write_md(out_dir: Path, idx: int, front: dict, body: str, slug_hint: str = '
 
 
 def do_jailbreak_llms(tmp: Path, out_root: Path, cap: int):
-    src = tmp / 'jailbreak_llms/data/prompts/jailbreak_prompts_2023_12_25.csv'
+    """
+    Ingest the FULL set of adversarial content from Xu et al.'s jailbreak_llms:
+      - jailbreak_prompts_2023_12_25.csv  (~24,853 rows)  — latest snapshot
+      - jailbreak_prompts_2023_05_07.csv  (~7,678 rows)   — earlier snapshot
+      - forbidden_question/forbidden_question_set.csv     — canonical forbidden-Q set
+    Prompt text is deduplicated by SHA-1 across all three sources so we don't
+    emit the same payload twice when it appears in both snapshots.
+
+    The `--cap` argument is IGNORED for this source when it's the default
+    (3000) so the full set lands. Pass a small cap explicitly to sample.
+    """
+    import hashlib
     out = out_root / 'bad_jailbreak_llms'
     if out.exists(): shutil.rmtree(out)
+    # Cap semantics: if user left the default (3000), interpret as "no cap".
+    # If they set anything else, respect it.
+    effective_cap = None if cap == DEFAULT_CAP else cap
+
+    seen = set()   # SHA-1 of prompt text, for dedup across snapshots
     n = 0
-    with open(src, newline='', encoding='utf-8', errors='replace') as f:
-        for i, row in enumerate(csv.DictReader(f)):
-            if n >= cap: break
-            prompt = (row.get('prompt') or '').strip()
-            if not prompt: continue
-            front = {
-                'source': 'jailbreak_llms',
-                'source_url': 'https://github.com/verazuo/jailbreak_llms',
-                'source_row_index': i,
-                'platform': row.get('platform', ''),
-                'community': row.get('community', ''),
-                'created_at': row.get('created_at', ''),
-                'is_jailbreak': row.get('jailbreak', ''),
-                'license': 'MIT (see upstream)',
-                'category': 'jailbreak_prompt',
-            }
-            write_md(out, n, front, prompt, slug_hint=row.get('community', ''))
-            n += 1
+
+    def _hash(s: str) -> str:
+        return hashlib.sha1(s.encode('utf-8', errors='replace')).hexdigest()
+
+    # 1) jailbreak_prompts CSVs (latest first, so the newer metadata wins on ties)
+    prompt_csvs = [
+        ('jailbreak_prompts_2023_12_25.csv', '2023_12_25'),
+        ('jailbreak_prompts_2023_05_07.csv', '2023_05_07'),
+    ]
+    for fname, snapshot in prompt_csvs:
+        src = tmp / f'jailbreak_llms/data/prompts/{fname}'
+        if not src.exists():
+            print(f'  WARN: {src} missing; skipping')
+            continue
+        with open(src, newline='', encoding='utf-8', errors='replace') as f:
+            for i, row in enumerate(csv.DictReader(f)):
+                if effective_cap is not None and n >= effective_cap: break
+                prompt = (row.get('prompt') or '').strip()
+                if not prompt: continue
+                h = _hash(prompt)
+                if h in seen: continue
+                seen.add(h)
+                front = {
+                    'source': 'jailbreak_llms',
+                    'source_url': 'https://github.com/verazuo/jailbreak_llms',
+                    'source_file': f'prompts/{fname}',
+                    'snapshot': snapshot,
+                    'source_row_index': i,
+                    'platform': row.get('platform', ''),
+                    'community': row.get('community', ''),
+                    'created_at': row.get('created_at', ''),
+                    'is_jailbreak': row.get('jailbreak', ''),
+                    'license': 'MIT (see upstream)',
+                    'category': 'jailbreak_prompt',
+                }
+                write_md(out, n, front, prompt, slug_hint=row.get('community', ''))
+                n += 1
+
+    # 2) forbidden_question_set — different schema, question-shaped rows
+    fqs = tmp / 'jailbreak_llms/data/forbidden_question/forbidden_question_set.csv'
+    if fqs.exists():
+        with open(fqs, newline='', encoding='utf-8', errors='replace') as f:
+            for i, row in enumerate(csv.DictReader(f)):
+                if effective_cap is not None and n >= effective_cap: break
+                # column is typically 'question'; fall back to any long text col
+                q = (row.get('question') or row.get('prompt') or '').strip()
+                if not q: continue
+                h = _hash(q)
+                if h in seen: continue
+                seen.add(h)
+                front = {
+                    'source': 'jailbreak_llms',
+                    'source_url': 'https://github.com/verazuo/jailbreak_llms',
+                    'source_file': 'forbidden_question/forbidden_question_set.csv',
+                    'source_row_index': i,
+                    'content_policy_name': row.get('content_policy_name', ''),
+                    'content_policy_id': row.get('content_policy_id', ''),
+                    'q_id': row.get('q_id', ''),
+                    'license': 'MIT (see upstream)',
+                    'category': 'forbidden_question',
+                }
+                write_md(out, n, front, q,
+                         slug_hint=row.get('content_policy_name', 'forbidden_q'))
+                n += 1
     print(f'jailbreak_llms: {n} files -> {out}')
 
 
